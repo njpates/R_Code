@@ -225,3 +225,12 @@ while (k<N+1){
   print(k)
 }
 EM_Path_matrix %>% data.table
+
+Adopt_mat = array(0,dim=c(N,TH))
+for(i in 1:(ncol(EM_Path_matrix)-1)){
+  Adopt_mat[,i] = ((EM_Path_matrix[,i+1] - EM_Path_matrix[,i] - 2)%>% abs)
+}
+Adopt_mat[,1] = ((EM_Path_matrix[,1+1] - EM_Path_matrix[,1] - 1)%>% abs)
+
+
+
