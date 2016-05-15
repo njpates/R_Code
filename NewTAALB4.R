@@ -231,6 +231,14 @@ for(i in 1:(ncol(EM_Path_matrix)-1)){
   Adopt_mat[,i] = ((EM_Path_matrix[,i+1] - EM_Path_matrix[,i] - 2)%>% abs)
 }
 Adopt_mat[,1] = ((EM_Path_matrix[,1+1] - EM_Path_matrix[,1] - 1)%>% abs)
+Adopt_mat[,TH] = ((EM_Path_matrix[,TH+1] - EM_Path_matrix[,TH] - 1)%>% abs)
 
+#write.csv(Adopt_mat,'check.csv')
+Adopt_prop=((array(1,dim=c(TH,N))%*%Adopt_mat)[1,] %>% cumsum / N )
+Adopt_prop %>% plot(xlab ='Time (in Periods)',
+                    ylab ='Cumulative Adoption',type='l')
 
+######## Choice Matrix ########
+# This gives the optimal choices for everyone that adopted without the government's help.
 
+Choice = Adopt_mat %*% c(1:TH)
