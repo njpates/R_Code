@@ -77,7 +77,7 @@ pa <- .5
 
 # Actual Period when the policy becomes active
 
-A <- TH * pa %>% round(digits=0)
+A <- TH * pa %>% round(digits=1)
 
 # Period when the policy is announced
 
@@ -238,7 +238,14 @@ Adopt_prop=((array(1,dim=c(TH,N))%*%Adopt_mat)[1,] %>% cumsum / N )
 Adopt_prop %>% plot(xlab ='Time (in Periods)',
                     ylab ='Cumulative Adoption',type='l')
 
-######## Choice Matrix ########
+######## Choice Data Table ##########
 # This gives the optimal choices for everyone that adopted without the government's help.
 
-Choice = Adopt_mat %*% c(1:TH)
+Choice= (Adopt_mat %*% c(1:TH)) %>% data.table
+colnames(Choice) = 'Free_Market'
+Choice[,Index:=1:nrow(Choice)]
+Choice[,Theta:=theta]
+Past_Periods = Choice[,Free_Market>announce]['Free_Market']
+Active_Farmers=Choice[,Index][Choice[,Free_Market>announce]]
+Active_Theta=Choice[,Theta][Choice[,Free_Market>announce]]
+Choice[,paste('Test',1):=Index]
