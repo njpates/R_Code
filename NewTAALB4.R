@@ -1,5 +1,4 @@
-# Targeted Announced Adoption with Lumpsum payments with Budget Constraints
-
+# Targeted Announced Adoption with Lumpsum payments with Budget ConstraintsE
 # Let '#@!@#' be the symbol for potential
 # changes to the type of analysis
 # Let '#!!!#' be the symbol for key looping
@@ -21,10 +20,10 @@ library(dplyr)
 # horizon TH. At the start of the time period, farmers
 # KNOW that the policy will begin at time A. That is
 # the government doesn't "suprise" farmers with a
-# policy just as it is beginning. We can alter thisS
+# policy just as it is beginning. We can alter this
 # assumption by taking the market expectations adoption
 # with the expectation neutral adoption. We assume that
-# when the government offers the subsidy, they will select
+# when the government offers the subsidy, they will selec
 # a portion of the farmers that haven't yet adopted at
 # random. That is the government could waste its "offers"
 # on farmers that would adopt if they didn't recieve
@@ -52,7 +51,7 @@ TH <- 50
 
 ##### Number of firms in the market #####
 
-N <- 1000
+N <- 500
 
 ##### Distributional Parameters #####
 r = 0.1;beta = 5;mu = 0
@@ -171,8 +170,8 @@ while (k<N+1){
   prof = -prof
   prof = prof - min(prof) + 1 %>% round(digits = 3)
   
-  #!##!#!#!#!#!#!#!#!#!#!#!#!    
   graph_create = function(TH){
+    require(igraph)
     edge_label1 <- paste("P",rep(0,length = TH),',',seq(1:TH),')',sep='') %>%cbind(paste("P(",rep(1,length=TH),",",seq(1:TH),") - C",seq(1:TH),sep=""))
     edge_label = paste("P(",rep(1,length=TH-1),",",seq(2,TH),")",sep="") %>% cbind(edge_label1[-1,] )
     edge_label = c(edge_label1[1,]) %>% c(edge_label %>% t %>% c)
@@ -207,14 +206,14 @@ while (k<N+1){
     
     xlayout = c(1) %>% c(cbind(c(2:TH),c(2:TH))%>% t) %>% c(TH+1)
     ylayout = c(2) %>% c(rep(c(2,0),times=(TH-1))) %>% c(1)
-    layout = array(c(xlayout,ylayout),dim=c(8,2))
+    layout = array(c(xlayout,ylayout),dim=c(2*TH,2))
     adjg <- graph.adjlist(adj)
     list(graph = adjg,layout=layout,label = edge_label)
   }
   #plot((TH %>% graph_create)$graph,layout=(TH %>% graph_create)$layout,edge.label=(TH %>% graph_create)$label)
-  #plot((TH %>% graph_create)$graph,layout=(TH %>% graph_create)$layout,edge.label=prof)
+  #plot((TH %>% graph_create)$graph,layout=(TH %>% graph_create)$layout,edge.label=)
   
-  #!##!#!#!#!#!#!#!#!#!#!#!#!
+  
   #plot((TH %>% graph_create)$graph,layout=layout,edge.label=(TH %>% graph_create)$label)
   
   #plot((TH %>% graph_create)$graph,layout=layout,edge.label=prof)
@@ -243,9 +242,237 @@ Adopt_prop %>% plot(xlab ='Time (in Periods)',
 
 Choice= (Adopt_mat %*% c(1:TH)) %>% data.table
 colnames(Choice) = 'Free_Market'
-Choice[,Index:=1:nrow(Choice)]
+Choice[,Index:=c(1:nrow(Choice))]
 Choice[,Theta:=theta]
 Past_Periods = Choice[,Free_Market>announce]['Free_Market']
-Active_Farmers=Choice[,Index][Choice[,Free_Market>announce]]
-Active_Theta=Choice[,Theta][Choice[,Free_Market>announce]]
-Choice[,paste('Test',1):=Index]
+
+# Currently active farmers in the system
+Active_Farmers=Choice[,Index][Choice[,Free_Market]>=announce]
+Inactive_Farmers=Choice[,Index][Choice[,Free_Market]<announce]
+
+# Characteristics of active farmers
+Active_Theta=Choice[,Theta][Choice[,Free_Market]>=announce]
+
+# Verified Test of Adding columns to Choice Table
+#Choice[,paste('Test',1):=Index]
+
+# Government Parameters
+
+Budget <- 2000000
+
+subsidy <- 40000
+
+factor_num <- Budget/subsidy
+
+N0 <- Active_Farmers %>% length
+
+prob0 <- factor_num/N0
+
+
+##### Adoption Plan with Neutral Expectations [announce:A] ######
+# Idea:
+# We will remove all famers that have adopted before the announcment period 'announce'. These are farmers that have already made their decisions before they realized the policy was in place. Next we calculate the probability that the farmer believes will be the chances of getting the subsidy. Prob before the policy is active is of course zero. After the subsidy is active probability is based upon the current farmers in the pool at the time the policy is announced and the number of open slots the government can fill.
+prob <- c()
+
+prob[1:A-1] <- 0
+
+i <- 1
+while(i+A-1<TH+1){
+  prob[i+A-1] <- factor_num/(N0-factor_num*(i-1))
+  
+  if(prob[i+A-1]>1 | prob[i+A-1]<0){
+    prob[i+A-1] <- 1
+  }
+  
+  i <- i+1
+}
+
+k <- 1
+
+EN_Path_matrix <- array(0,dim=c(N0,TH+1))
+
+while(k < N0+1){
+  
+  theta1 <- Active_Theta[k]
+  
+  underprof = ((theta1 %>% pi2) *df[-1]) %>% round(digits=3)
+  overprof = cbind((theta1 %>% pi1) * df[-1],(theta1 %>% pi2 - time[-1] %>% funccost)*df[-1])
+  overprof[c((A-1):(TH-1)),2]= overprof[c((A-1):(TH-1)),2]+subsidy*prob[A:TH]*df[A:TH]
+  
+  prof =  cbind(overprof,underprof) %>% t %>% c
+  
+  prof = c(theta1 %>% pi1 *df[1],(theta1 %>% pi2 -time[1] %>% funccost)*df[1],prof)
+  prof = -prof
+  prof = prof - min(prof) + 1 %>% round(digits = 3)
+  
+  adjg = graph_create(TH)$graph
+  
+  #plot(adjg,layout=layout,edge.label=graph_create(TH)$label)
+  #plot(adjg,layout=layout,edge.label=prof)
+  EN_Path_matrix[k,]<- get.shortest.paths(adjg,from=1,to=(2*TH),weights=prof)$vpath[[1]]
+  
+  
+  #EN_Path_matrix[k,] <- get.shortest.paths(adjg,from=1,to=(2*(announce-1)),weights=prof)$vpath[[1]][-announce]  %>% c(get.shortest.paths(adjg,from=2*(announce-1),to=2*TH,weights=prof)$vpath[[1]])
+  k <- k+1
+  print(theta1)
+}
+
+
+####
+EN_Adopt_mat = array(0,dim=c(N0,TH))
+for(i in 1:(ncol(EN_Path_matrix)-1)){
+  EN_Adopt_mat[,i] = ((EN_Path_matrix[,i+1] - EN_Path_matrix[,i] - 2)%>% abs)
+}
+EN_Adopt_mat[,1] = ((EN_Path_matrix[,1+1] - EN_Path_matrix[,1] - 1)%>% abs)
+EN_Adopt_mat[,TH] = ((EN_Path_matrix[,TH+1] - EN_Path_matrix[,TH] - 1)%>% abs)
+
+
+Inter_Choice = rep(0,times=nrow(Choice))
+Inter_Choice[Active_Farmers] = EN_Adopt_mat %*% c(1:TH) %>% c
+Inter_Choice[Inactive_Farmers] = Choice[Inactive_Farmers,Free_Market]
+
+Choice[,paste("Period",A-1):=Inter_Choice,with=FALSE]
+#################################################################
+
+######## Unique Vector and Counts in the Adoption Vector ########
+UV_per = Choice[,paste('Period',A-1),with=FALSE] %>% unique 
+UV = 0 %>% rep(times=UV_per %>% nrow)
+sampvec = Choice[,paste0('Period ',A-1),with=FALSE] %>% c
+UV_uper = rep(0,times=UV_per %>% nrow)
+for(i in 1:(UV %>% length)){
+  UV_uper[i] = (sampvec[[1]] == UV_per[[1]][i]) %>% sum
+}
+UV_Adopt_prop = rep(0,times=TH)
+UV_Adopt_prop[UV_per[[1]]] = UV_uper
+UV_Adopt_prop = (UV_Adopt_prop %>% cumsum)/N
+UV_Adopt_prop %>% lines(lty=3)
+EN_Adopt_prop = UV_Adopt_prop
+
+# Currently active farmers in the system
+
+Active_Farmers=Choice[,Index][Choice[,paste0('Period',A-1)>=A-1]]
+Inactive_Farmers=Choice[,Index][Choice[,paste0('Period',A-1)<A-1]]
+Active_Theta=Choice[,Theta][Choice[,paste0('Period',A-1)>=A-1]]
+
+#################################################################
+
+
+######################## Final Iteration ########################
+
+Choice[,paste0('Period ',A):=Choice[,paste0('Period ',A-1),with=FALSE],with=FALSE]
+
+######## Updating New and Old Farmers w/ Characteristics ########
+Active_Farmers=Choice[,Index][Choice[,Intermediate]>A]
+Inactive_Farmers=Choice[,Index][Choice[,Intermediate<=A]]
+Active_Theta=Choice[,Theta][Choice[,Intermediate>A]]
+N0 = Active_Farmers %>% length
+
+Choice[,paste0('Period ',A):=Choice[,paste0('Period ',A-1),with=FALSE],with=FALSE]
+
+q <- A
+
+
+
+while(q < TH+1){
+  
+  # Who is Still in the Active Farmers?
+  Active_Farmers=Choice[,Index][Choice[,paste('Period',q-1),with=FALSE]>q-1]
+  Inactive_Farmers=Choice[,Index][Choice[,paste('Period',q-1),with=FALSE]<=q-1]
+  Active_Theta=Choice[,Theta][Choice[,paste('Period',q-1),with=FALSE]>q-1]
+  N0  = Active_Theta %>% length
+  
+  # What does our New Group look like?
+  Choice[,paste('Period',q):=Choice[,paste('Period',q-1),with=FALSE],with=FALSE]
+  
+  ######################## Positive Afirmation ###################
+  EP_Path_matrix = array(0,dim=c(N0,TH+1))
+  EP_Adopt_mat = array(0,dim=c(N0,TH))
+  k=1
+  while(k<N0+1)  {
+    
+    theta1 = Active_Theta[k]
+    adjg = graph_create(TH)$graph
+    
+    underprof = ((theta1 %>% pi2) *df[-1]) %>% round(digits=3)
+    overprof = cbind((theta1 %>% pi1) * df[-1],(theta1 %>% pi2 - time[-1] %>% funccost)*df[-1]) %>% round(digits=3)
+    prob1 = prob
+    prob1[q] = 1
+    overprof[c((A-1):(TH-1)),2]= overprof[c((A-1):(TH-1)),2]+subsidy*prob1[A:TH]*df[A:TH]
+    prof =  cbind(overprof,underprof) %>% t %>% c
+    prof = c(theta1 %>% pi1 *df[1],(theta1 %>% pi2 -time[1] %>% funccost)*df[1],prof)
+    prof = -prof
+    prof = prof - min(prof) + 1 %>% round(digits = 3)
+    
+    EP_Path_matrix[k,]<- get.shortest.paths(adjg,from=1,to=(2*TH),weights=prof)$vpath[[1]]
+    
+    #  EP_Path_matrix[k,] <- get.shortest.paths(adjg,from=1,to=(2*(q-1)),weights=prof)$vpath[[1]][-q]  %>% c(get.shortest.paths(adjg,from=2*(q-1),to=2*TH,weights=prof)$vpath[[1]]) 
+    
+    k=k+1
+    print(theta1)
+  }
+  
+  
+  for(i in 1:(ncol(EP_Path_matrix)-1)){
+    EP_Adopt_mat[,i] = ((EP_Path_matrix[,i+1] - EP_Path_matrix[,i] - 2)%>% abs)
+  }
+  EP_Adopt_mat[,1] = ((EP_Path_matrix[,1+1] - EP_Path_matrix[,1] - 1)%>% abs)
+  EP_Adopt_mat[,TH] = ((EP_Path_matrix[,TH+1] - EP_Path_matrix[,TH] - 1)%>% abs)
+  EP_Choice = rep(0,times=Choice %>% nrow)
+  EP_Choice[Inactive_Farmers] = (Choice[Inactive_Farmers,paste('Period',q-1),with=FALSE])[[1]]
+  EP_Choice[Active_Farmers] = EP_Adopt_mat %*% c(1:TH) %>% c
+  Choice[,paste('EP_Choice',q):=EP_Choice,with=FALSE]
+  
+  Applicants =Choice[,Index][Choice[,paste('EP_Choice',q),with=FALSE]==q]
+  if((Applicants %>% length)>Budget/subsidy %>% round(digits=0) ){
+    Accepted = sample(Applicants,round(Budget/subsidy,digits=0),0)}else{
+      Accepted = Applicants
+    }
+  
+  Choice[Accepted,paste('Period',q):=q]
+  
+  Active_Farmers=Choice[,Index][Choice[,paste('Period',q),with=FALSE]>q]
+  Inactive_Farmers=Choice[,Index][Choice[,paste('Period',q),with=FALSE]<=q]
+  Active_Theta=Choice[,Theta][Choice[,paste('Period',q),with=FALSE]>q]
+  N0  = Active_Theta %>% length
+  
+  ######################## Negative Afirmation ###################
+  EG_Path_matrix = array(0,dim=c(N0,TH+1))
+  EG_Adopt_mat = array(0,dim=c(N0,TH))
+  k=1
+  while(k<N0+1)  {
+    
+    theta1 = Active_Theta[k]
+    adjg = graph_create(TH)$graph
+    
+    underprof = ((theta1 %>% pi2) *df[-1]) %>% round(digits=3)
+    overprof = cbind((theta1 %>% pi1) * df[-1],(theta1 %>% pi2 - time[-1] %>% funccost)*df[-1]) %>% round(digits=3)
+    prob1 = prob
+    prob1[q] = 0
+    overprof[c((A-1):(TH-1)),2]= overprof[c((A-1):(TH-1)),2]+subsidy*prob1[A:TH]*df[A:TH]
+    prof =  cbind(overprof,underprof) %>% t %>% c
+    prof = c(theta1 %>% pi1 *df[1],(theta1 %>% pi2 -time[1] %>% funccost)*df[1],prof)
+    prof = -prof
+    prof = prof - min(prof) + 1 %>% round(digits = 3)
+    
+    EG_Path_matrix[k,]<- get.shortest.paths(adjg,from=1,to=(2*TH),weights=prof)$vpath[[1]]
+    
+    #  EG_Path_matrix[k,] <- get.shortest.paths(adjg,from=1,to=(2*(q-1)),weights=prof)$vpath[[1]][-q]  %>% c(get.shortest.paths(adjg,from=2*(q-1),to=2*TH,weights=prof)$vpath[[1]]) 
+    
+    k=k+1
+    print(theta1)
+  }
+  
+  
+  for(i in 1:(ncol(EG_Path_matrix)-1)){
+    EG_Adopt_mat[,i] = ((EG_Path_matrix[,i+1] - EG_Path_matrix[,i] - 2)%>% abs)
+  }
+  EG_Adopt_mat[,1] = ((EG_Path_matrix[,1+1] - EG_Path_matrix[,1] - 1)%>% abs)
+  EG_Adopt_mat[,TH] = ((EG_Path_matrix[,TH+1] - EG_Path_matrix[,TH] - 1)%>% abs)
+  EG_Choice = rep(0,times=Choice %>% nrow)
+  EG_Choice[Inactive_Farmers] = (Choice[Inactive_Farmers,paste('Period',q-1),with=FALSE])[[1]]
+  EG_Choice[Active_Farmers] = EG_Adopt_mat %*% c(1:TH) %>% c
+  Choice[,paste('EG_Choice',q):=EG_Choice,with=FALSE]
+  
+  print(q)
+  q=q+1
+}
