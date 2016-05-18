@@ -1,4 +1,4 @@
-# Targeted Announced Adoption with Lumpsum payments with Budget ConstraintsE
+Targeted Announced Adoption with Lumpsum payments with Budget ConstraintsE
 # Let '#@!@#' be the symbol for potential
 # changes to the type of analysis
 # Let '#!!!#' be the symbol for key looping
@@ -258,9 +258,9 @@ Active_Theta=Choice[,Theta][Choice[,Free_Market]>=announce]
 
 # Government Parameters
 
-Budget <- 2000000
+Budget <- 1000000
 
-subsidy <- 40000
+subsidy <- 4000
 
 factor_num <- Budget/subsidy
 
@@ -476,3 +476,20 @@ while(q < TH+1){
   print(q)
   q=q+1
 }
+periodvec =paste("Period",c((TH):TH))
+Choice[,periodvec,with=FALSE] %>% as.data.frame
+
+SA_per = Choice[,paste('Period',TH),with=FALSE] %>% unique 
+SA = 0 %>% rep(times=SA_per %>% nrow)
+sampvec = Choice[,paste0('Period ',TH),with=FALSE] %>% c
+SA_uper = rep(0,times=SA_per %>% nrow)
+for(i in 1:(SA %>% length)){
+  SA_uper[i] = (sampvec[[1]] == SA_per[[1]][i]) %>% sum
+}
+SA_Adopt_prop = rep(0,times=TH)
+SA_Adopt_prop[SA_per[[1]]] = SA_uper
+SA_Adopt_prop = (SA_Adopt_prop %>% cumsum)/N
+SA_Adopt_prop %>% lines(lty=2,lwd=2)
+
+(Choice[,Free_Market] - Choice[,"Period 50",with=FALSE])[[1]] %>% hist
+
